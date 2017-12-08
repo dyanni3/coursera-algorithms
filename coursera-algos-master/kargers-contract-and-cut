@@ -1,0 +1,443 @@
+#%%
+def get_G(): #reads G into the appropriate format from the txt file available on course website
+    f = open('C:\\Users\dyanni3\Downloads\karger.txt', 'r')
+    G=[]
+    for i in range(200):
+        G.append([])
+        a=f.readline()
+        a=a.split()
+        a=[int(i) for i in a]
+        G.append(a)
+    G=list(filter(lambda x: not x==[],G))
+    return(G)
+    
+#%%
+def contract_and_cut(h): #uses karger's contraction alg to compute a cut 
+                         #(to find a min cut run multiple times take min(output))
+                         #takes as input a graph h in the form of an adjacency-list.
+                         #returns a number of cut edges (not necessarily the minium cut).
+    
+    potential_verts=[i for i in range(len(h))] #a list of potential node choices that still exist
+    from random import shuffle
+    shuffle(potential_verts) #shuffle the list
+    
+    while(len(potential_verts)>2):
+
+        #choose an edge uniformly at random from the graph. Chooses two nodes from 
+        #the extant nodes list, one node will swallow the other.             
+        edge=[None,None]
+        edge[0]=h[potential_verts[0]][0]-1
+        edge[1]=h[potential_verts[0]][1]-1
+        
+        #remove the "swallowed" of the two nodes from the potential nodes list. reshuffle the list
+        potential_verts.remove(potential_verts[0])
+        shuffle(potential_verts)
+        
+        #add the adjacency information of the swallowed node to the swallower node
+        for element in h[edge[0]]:
+            h[edge[1]].append(element)
+            
+        #go through the entire graph and redirect every reference to the old/swallowed node to the new super-node
+        #this could definitely be better optimized! (for future if I have time)
+        for e in range(len(h)):
+            for j in range(len(h[e])):
+                if h[e][j]==edge[0]+1:
+                    h[e][j]=edge[1]+1
+                    
+        #delete self-loops. i.e. no node should point to itself
+        h[edge[1]][1:]=list(filter(lambda x: not x==edge[1]+1,h[edge[1]][1:]))
+        
+        #finally, 'delete' the swallowed node (unnecessary step but makes graph cleaner looking for debugging steps)
+        h[edge[0]]=[-1]      
+     
+    #by now h has a bunch of disconnected "dummy nodes" [-1], and only two remaining super-nodes
+    #h might look like [[-1],[-1],[-1],...[37,86,86,86,86,86,86,86...],[-1],[-1],...[86,37,37,37....],[-1],[-1],...]
+    #then potential_verts would be [36,85]
+    return len(h[potential_verts[1]])-1#,[potential_verts[0]+1,potential_verts[1]+1]
+    
+    
+#%%    
+def main(ans,n_runs):
+    for i in range(n_runs):
+        G=get_G()
+        x=contract_and_cut(G)
+        if x<ans:
+            ans=x
+    return ans
+
+#%%  
+def get_h():  
+    return [[1, 2, 3, 4, 7], [2, 1, 3, 4],[3, 1, 2, 4], [4, 1, 2, 3, 5], [5, 4, 6, 7, 8], [6, 5, 7, 8], [7, 1, 5, 6, 8], [8, 5, 6, 7]]
+class graph(object):
+    from collections import defaultdict
+    inf=1e309
+    
+    def __init__(self):
+        self.nodes = []
+        self.neighbors = defaultdict(set)
+        self.edge_lengths = {}
+
+    def add_node(self, *nodes):
+        [self.nodes.append(n) for n in nodes]
+
+    def add_edge(self, tail, head,d=inf):
+        self.add_node(tail, head)
+        self.neighbors[tail].add(head)
+        self.edge_lengths[(tail, head)] = d
+
+    def dijkstra(self, source):
+        D={node:inf for node in self.nodes}
+        D[source]=0
+        unvisited = self.nodes.copy(); 
+
+        while unvisited:
+            min_node = min(unvisited, key=D.get)
+            unvisited.remove(min_node)
+
+            for neighbor in self.neighbors[min_node]:
+                d = D[min_node] + self.edge_lengths[(min_node, neighbor)]
+                if D[neighbor] > d and inf >= d: D[neighbor]=d
+                    
+        return D
+# -*- coding: utf-8 -*-
+"""
+Sorting using mergesort for Coursera Algorithms course part 1
+
+@author: dyanni3
+"""
+
+#%%
+#import the txt file...
+results = []
+with open('C:\\Users\\dyanni3\\Desktop\\list.txt') as inputfile:
+    for line in inputfile:
+        results.append(int(line.strip().split('\n')[0]))
+
+#%%
+def sort(A):
+#inputs: an array A of length n
+#returns: sorted A by mergeSort algorithm
+    
+    #base case
+    if len(A)<2:
+        return A
+    
+    #merge subroutine
+    def merge(B,C):
+    #inputs two sorted arrays and merges them together- return a big sorted array
+    
+        #preallocate for the return array
+        n=len(B)+len(C);
+        D=[0 for index in range(n)];
+        
+        #walk through B and C in parallel, putting elements into D in the appropriate order...  
+        #introduce indices to keep track of where we are in array B and array C
+        B_index=0; C_index=0;
+        
+        for k in range(n):
+            
+            #check whether we've exhausted either of the small arrays
+            if B_index>=len(B): #then finish copying from C without further thought
+                D[k]=C[C_index];
+                C_index+=1;
+            elif C_index>=len(C): #then finish copying from B without further thought
+                D[k]=B[B_index];
+                B_index+=1;
+             
+            #otherwise compare which small array has the lesser value at current indices, put that value into D 
+            elif (B[B_index]<C[C_index]):
+                D[k]=B[B_index];
+                B_index+=1;
+            else:
+                D[k]=C[C_index];
+                C_index+=1;
+                
+        return D
+        
+    #divide into subproblems     
+    leftArray=A[:int(len(A)/2)]; 
+    rightArray=A[int(len(A)/2):]; 
+    
+    #conquer subproblems
+    leftArray=sort(leftArray)#,left_length);
+    rightArray=sort(rightArray)#,right_length);
+    
+    #return stitched together solution
+    return merge(leftArray,rightArray)
+    
+#%%    
+def sort_and_count(A):
+    #inputs an array A of length n and returns sorted A by mergeSort algorithm and number of inversions
+    
+    #base case
+    if len(A)<2:
+        return A,0
+    
+    #merge_and_count subroutine
+    def merge_and_count(B,C):
+        #inputs two sorted arrays and merges them together while counting the number of inversions
+        #returns a big sorted array and number of inversions
+        
+        #initialization type stuff
+        n=len(B)+len(C);
+        D=[0 for index in range(n)];
+        i=0; j=0;
+        num_inversions=0;
+        
+        #main merging loop: walking through two half-lists in parallel comparing elements and pasting them into output array
+        for k in range(n):
+            
+            if i>=len(B): #finish copying from C, have already exhausted elements in B
+                D[k]=C[j];
+                j+=1;
+                
+            elif j>=len(C): #finish copying from B, have already exhausted elements in C
+                D[k]=B[i];
+                i+=1;
+                
+            elif (B[i]<C[j]):
+                D[k]=B[i];
+                i+=1;
+            else:
+                D[k]=C[j];
+                j+=1;
+                num_inversions+=len(B)-i
+                
+        return D,num_inversions
+        
+    #divide into subproblems     
+    leftArray=A[:int(len(A)/2)]; 
+    rightArray=A[int(len(A)/2):]; 
+    
+    #conquer subproblems
+    leftArray,x=sort_and_count(leftArray)
+    rightArray,y=sort_and_count(rightArray)
+
+    #stitch together solutions to subproblems and return result
+    merged,num_inversions=merge_and_count(leftArray,rightArray)
+    num_inversions=x+y+num_inversions;
+    return merged,num_inversions
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep  2 21:51:18 2016
+QuickSort as taught in Tim Roughgarden algorithms course
+@author: dyanni3
+"""
+
+def QSort(A,method):
+    #takes an unsorted array input A. Returns a sorted *numpy* array
+    
+    import numpy as np
+    
+    #base case
+    if len(A)<3:
+        if len(A)==2 and A[0]>A[1]:
+            return 1, np.array([A[1],A[0]])
+        elif len(A)==2 and A[0]<A[1]:
+            return 1,np.array(A)
+        return 0,A
+        
+    #define subroutines--------------------
+    def Partition(A,p):
+        #partitions a list into [..<A[p]....A[p]....>A[p]..] 
+        #given an unsorted list and an index p returns partitioned list and the true index of A[p]
+    
+        # initially the data is [..some >A[p] and some less than A[p] all mixed ]
+    
+        i=1; #index of first known element greater than A[p]
+        j=1; #index of first undiscovered element
+        slot=None
+        
+        #swap A[p] with A[0]
+        slot=A[0]
+        A[0]=A[p]
+        A[p]=slot    
+        
+        # now data looks like [A[p], len(A)-1 mixed data entries]
+        
+        #primary loop of Partition
+        while(j<len(A)):
+            """if A[j]>A[p]: #great, do nothing
+                pass"""
+            if A[j]<A[0]: #swap A[i] and A[j]
+                slot=A[i]
+                A[i]=A[j]
+                A[j]=slot
+                i+=1
+            j+=1
+            
+        # now the data looks like [A[p],<A[p],<A[p],...,>A[p],>A[p],...]
+        
+        #swap A[]
+        slot=A[0]
+        A[0]=A[i-1]
+        A[i-1]=slot
+        
+        # now the data looks like [<A[p],<A[p],...,A[p],>A[p],>A[p],...]
+        return A,i-1
+     
+
+    def ChoosePivot(A,method='random'): #chooses a pivot, using 'method'
+        """method='random' chooses pivots at random
+        """
+        if method=='random':
+            return np.random.randint(0,len(A)-1)
+        elif method=='first':
+            return 0
+        elif method=='last':
+            return len(A)-1
+        elif method=='median':
+            if len(A)%2==1:
+                first=A[0]
+                middle=A[int(len(A)/2)]
+                last=A[-1]
+            else:
+                first=A[0]
+                middle=A[int(len(A)/2)-1]
+                last=A[-1]
+            _,Q=QSort([first,middle,last],'random')
+            if Q[1]==first:
+                return 0
+            elif Q[1]==middle:
+                if len(A)%2==1:
+                    return int(len(A)/2)
+                else:
+                    return int((int(len(A))/2)-1)
+            else:
+                return len(A)-1
+                
+        
+    
+    #main
+    n=len(A)-1 #number of comparisons made at "level 0"
+    p=ChoosePivot(A,method) # O(1)
+    A,p=Partition(A,p) # O(len(A))
+    n_left, A_left=QSort(A[:p],method); A[:p]=A_left; #recursive call O(len(A_left)*log(len(A_left)))
+    n+=n_left #add number of comparisons made at all subsquent levels to the left
+    n_right,A_right=QSort(A[p+1:],method); A[p+1:]=A_right;
+    n+=n_right #add number of comparisons made at all subsequent levels to the right
+    
+    return n,np.array(A)
+    
+results = []
+with open('QSort.txt') as inputfile:
+    for line in inputfile:
+        results.append(line.strip().split('\n'))
+results=[int(x[0]) for x in results]
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+def test_case_one():
+    #returns simplest little diamond graph as list of edges
+    return [[1,2],[1,3],[2,4],[3,4]]
+    
+def test_case_two():
+    #returns three triangular cycles connected by one edge each
+    return [[1,2],[2,3],[2,4],[3,1],[4,7],[4,5],[5,6],[6,4],[7,8],[8,9],[9,7]]
+ 
+#%%   
+def txt_2_edge_list(filename):
+    max_element=0
+    edge_list=[]
+    f=open(filename,'r')
+    while(True):
+        a=f.readline()
+        if a=='':
+            break
+        a=a.split()
+        a=[int(i) for i in a]
+        edge_list.append(a)
+        if a[0]>max_element or a[1]>max_element:
+            max_element=max(a)
+    print("successfully read input file")
+    return edge_list,max_element
+    
+#%%    
+current_layer=0
+
+def set_current_layer(graph):
+    global current_layer
+    current_layer=len(graph.keys())
+    
+def topSort(graph,reverseQ):
+    print("graph successfully received by topSort")
+    #computes a topological sorting of an acyclic directed graph
+    #inputs: graph is a dictionary- key=nodeID, value=node object (see node class)
+    #inputs: reverseQ- a boolean option for whether to traverse the graph in reverse
+
+    set_current_layer(graph)
+    if not reverseQ:
+        SCC=[0,0,0,0,0]
+        num_remain=current_layer
+    
+    def DFS(graph, node, reverseQ=False):
+    #depth first search on graph starting from node (see above for how graph is represented)
+    #if reverseQ then we're going "backwards" in depth first search
+        global current_layer
+        node.explored=True
+        
+        if reverseQ:
+            for neighbor in node.incoming_neighborhood:
+                if not neighbor.explored:
+                    DFS(graph,neighbor,reverseQ)
+        else:
+            for neighbor in node.outgoing_neighborhood:
+                if not neighbor.explored:
+                    DFS(graph,neighbor,reverseQ)
+        node.layer=current_layer
+        current_layer-=1
+            
+    for nodeID in graph.keys():
+        node=graph[nodeID]
+        if not node.explored:
+            DFS(graph, node,reverseQ)
+            if not reverseQ:
+                if num_remain-current_layer>min(SCC):
+                    SCC[SCC.index(min(SCC))]=num_remain-current_layer
+                num_remain-=num_remain-current_layer
+    print("topSort successfully completed: reverseQ==%s"%str(reverseQ))
+    if not reverseQ:
+        return SCC
+#%%            
+class node(object):
+    
+    def __init__(self,ID,outgoing_neighborhood,incoming_neighborhood,layer=0,explored=False):
+        self.ID=ID
+        self.outgoing_neighborhood=outgoing_neighborhood
+        self.incoming_neighborhood=incoming_neighborhood
+        self.layer=layer
+        self.explored=explored
+        
+    def __repr__(self):
+        return("a node with ID: %s, at layer %d"%(str(self.ID),self.layer))
+        
+        
+#%%
+def init_graph(edge_list,max_element):
+    graph={i:node(i,[],[]) for i in range(1,max_element+1)}
+    for edge in edge_list:
+        graph[edge[0]].outgoing_neighborhood.append(graph[edge[1]])
+        graph[edge[1]].incoming_neighborhood.append(graph[edge[0]])
+    print("graph successfully instantiated")
+    return graph
+    
+#%%
+def relabel(graph):
+    print("graph successfully received for relabeling")
+    graph2={}
+    for key in graph.keys():
+        graph2[graph[key].layer]=graph[key]
+        graph[key].explored=False
+    print("relabeled graph successfully constructed")
+    return graph2
+
+#%%
+def compute_SCC(filename):
+    edge_list,max_element=txt_2_edge_list(filename)
+    graph=init_graph(edge_list,max_element)
+    topSort(graph,reverseQ=True)
+    graph=relabel(graph)
+    return topSort(graph,False)
